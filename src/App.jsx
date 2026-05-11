@@ -1378,13 +1378,29 @@ function CommanderApp({ user, onLogout }) {
   }, []);
 
   async function loadAll() {
-    const t = await dbGetAll("tasks");
-    setTasks(t);
-    const mine = t.find(
-      (x) => x.commanderUsername === user.username && x.status === "Ongoing",
-    );
-    if (mine) setActiveTask(mine);
+  const t = await dbGetAll('tasks');
+  const sorted = t.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  setTasks(sorted);
+  const mine = sorted.find(x => x.commanderUsername === user.username && x.status === "Ongoing");
+  if (mine) {
+    setActiveTask(mine);
+    // Check the last leg to determine correct phase
+    const legs = mine.legs || [];
+    if (legs.length > 0) {
+      const lastLeg = legs[legs.length - 1];
+      // If last leg has departure but no arrival, show arrival form
+      if (lastLeg.timeDeparted && !lastLeg.timeArrived) {
+        setLegPhase("arrive");
+      } else {
+        // Last leg is complete, show departure for next leg
+        setLegPhase("depart");
+      }
+    } else {
+      // No legs yet, show departure
+      setLegPhase("depart");
+    }
   }
+}
 
   function flash(msg, type = "success") {
     setToast({ msg, type });
@@ -2399,7 +2415,7 @@ function CommanderApp({ user, onLogout }) {
                                 color: C.success,
                               }}
                             >
-                              Arrived At
+                              Arriving At
                             </div>
                             <div
                               style={{
